@@ -29,7 +29,6 @@ async function main(){
             '--write-info-json',
             '--write-annotations',
             '--write-description',
-            '-f', 'bestaudio',
             '--extract-audio',
             '--audio-format', 'mp3',
             '--no-post-overwrites',

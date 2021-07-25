@@ -41,13 +41,36 @@ async function main(){
     }
 
 
-    // make a playlist out of mp3s
+    // make a playlist out of mp3s in order of appearance in source list
+    let sourceListIds = fs.readFileSync('youtube-sources.txt').toString().split('\n').reduce((acc,  a)=>{
+        let mat = a.match(/v=(.+)$/)
+        if (mat) return [...acc, mat[1]];
+        return acc;
+    }, []);
+
     let allMp3 = fs.readdirSync('.').reduce((acc, a)=>{
         let mat = a.match(/\.mp3$/);
         if (mat) return [...acc, a];
         return acc;
     }, [])
-    fs.writeFileSync('list.m3u8', allMp3.join('\n'));
+
+    const lookupIdCache = {};
+    const lookupId = (filename) => {
+        if (lookupIdCache[filename]) {
+            lookupIdCache[filename] 
+        } else {
+            lookupIdCache[filename] = JSON.parse(fs.readFileSync(filename.replace(/\.mp3$/, '.info.json')))['display_id'];
+        }
+        return lookupIdCache[filename];
+    }
+
+    let sortedMp3List = allMp3.sort((a, b)=>{
+        let ida = lookupId(a);
+        let idb = lookupId(b);
+        return sourceListIds.indexOf(ida) - sourceListIds.indexOf(idb);
+    });
+
+    fs.writeFileSync('list.m3u8', sortedMp3List.join('\n'));
 }
 
 async function spawnAsync(cmd, args=[]) {

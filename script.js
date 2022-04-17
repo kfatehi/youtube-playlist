@@ -3,15 +3,21 @@ const fs = require('fs');
 
 
 async function main(){
+    let contentDir =  __dirname+"/youtube-content";
+    let ytSources =  __dirname+"/youtube-sources.txt";
+    let tempSources = __dirname+"/__youtube-sources.txt";
+
     // get existing mp3
-    let existingMp3 = fs.readdirSync('youtube-content').reduce((acc, a)=>{
+    let existingMp3 = fs.readdirSync(contentDir).reduce((acc, a)=>{
         let mat = a.match(/.+-(.+)\.mp3$/);
         if (mat) return [...acc, mat[1]];
         return acc;
     }, []);
 
     // exclude existing mp3
-    let vidList = fs.readFileSync('youtube-sources.txt').toString().split('\n').filter(a=>{
+    let vidList = fs.readFileSync(ytSources).toString().split('\n')
+    .filter(a=>!/^#/.test(a))
+    .filter(a=>{
         for(let id of existingMp3) {
             if (a.match(RegExp(id+"$"))) {
                 return false;
@@ -20,8 +26,7 @@ async function main(){
         return true;
     })
 
-    let tempSources = __dirname+"/__youtube-sources.txt";
-
+  if (vidList.length > 0) {
     // write it to disk for youtube-dl/ffmpeg to process...
     fs.writeFileSync(tempSources, vidList.join("\n"));
     try {
@@ -33,22 +38,23 @@ async function main(){
             '--audio-format', 'mp3',
             '--no-post-overwrites',
             '--batch-file', tempSources
-        ], {cwd: __dirname+"/youtube-content" });
+        ], {cwd: contentDir });
     } catch (err){
         
     } finally {
         fs.unlinkSync(tempSources);
     }
+  }
 
 
     // make a playlist out of mp3s in order of appearance in source list
-    let sourceListIds = fs.readFileSync('youtube-sources.txt').toString().split('\n').reduce((acc,  a)=>{
+    let sourceListIds = fs.readFileSync(ytSources).toString().split('\n').reduce((acc,  a)=>{
         let mat = a.match(/v=(.+)$/)
         if (mat) return [...acc, mat[1]];
         return acc;
     }, []);
 
-    let allMp3 = fs.readdirSync('.').reduce((acc, a)=>{
+    let allMp3 = fs.readdirSync(contentDir).reduce((acc, a)=>{
         let mat = a.match(/\.mp3$/);
         if (mat) return [...acc, a];
         return acc;
@@ -59,7 +65,7 @@ async function main(){
         if (lookupIdCache[filename]) {
             lookupIdCache[filename] 
         } else {
-            lookupIdCache[filename] = JSON.parse(fs.readFileSync(filename.replace(/\.mp3$/, '.info.json')))['display_id'];
+            lookupIdCache[filename] = JSON.parse(fs.readFileSync(contentDir+"/"+filename.replace(/\.mp3$/, '.info.json')))['display_id'];
         }
         return lookupIdCache[filename];
     }
@@ -70,7 +76,7 @@ async function main(){
         return sourceListIds.indexOf(ida) - sourceListIds.indexOf(idb);
     });
 
-    fs.writeFileSync('list.m3u8', sortedMp3List.join('\n'));
+    fs.writeFileSync('list.m3u8', sortedMp3List.map(fp=>contentDir+"/"+fp).join('\n'));
 }
 
 async function spawnAsync(cmd, args=[], opts={}) {

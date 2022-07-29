@@ -46,10 +46,20 @@ async function main(){
     // write it to disk for youtube-dl/ffmpeg to process...
     fs.writeFileSync(tempSources, vidList.join("\n"));
     try {
-      await spawnAsync('youtube-dl', [
+      // Switched to yt-dlp which works around slowdown. Technical deep dive:
+      // https://github.com/ytdl-org/youtube-dl/issues/29326#issuecomment-894619419
+      await spawnAsync('yt-dlp', [
         '--write-info-json',
         '--write-annotations',
         '--write-description',
+
+        // By default we would get a webm, but mp4 is more compatible.
+        // yt-dlp introduced a better way to deal with this, as was posted on reddit:
+        // https://www.reddit.com/r/youtubedl/comments/otjtex/comment/h6yw3ny/?utm_source=share&utm_medium=web2x&context=3
+        // > This would download mp4/m4a if available, and if not, would download the best available format(s) and recode/merge to mp4. This also doesn't limit to 1080p only.
+        '-S', 'res,ext:mp4:m4a', '--recode', 'mp4',
+
+        '-k', // keep video file
         '--extract-audio',
         '--audio-format', 'mp3',
         '--no-post-overwrites',

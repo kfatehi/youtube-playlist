@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width" />
+    <title></title>
+    <style>
+body {
+  background-color: black;
+  padding: 0;
+  margin: 0;
+  color: white;
+}
+a,a:visited {
+  color: white;
+}
+video {
+  width: 100%;
+}
+    </style>
+  </head>
+  <body>
+    <video autoplay controls></video>
+    <button id="prev">Previous</button>
+    <button id="next">Next</button>
+    <span id="title"></span>
+    <ul>
+      <% media.forEach((track, i)=> { %>
+        <li>
+          <a href="#" id="track-<%= i %>" data-pos="<%= i %>" data-url="/media/<%= track %>"><%= track %></a>
+        </li>
+      <% }) %>
+    </ul>
+    <span>Count: <%= count %></span>
+    <span>Total Duration: <%= totalDuration %></span>
+    <script>
+      let metadata = <%- JSON.stringify(metadata) -%>;
+      let pos = null;
+let count = 0;
+let video = document.querySelector('video');
+document.querySelectorAll('li a').forEach((a)=>{
+  count++;
+  a.addEventListener('click', ()=>{
+    playAtPos(parseInt(a.dataset.pos))
+  });
+});
+video.addEventListener('ended', ()=>{
+  playNext();
+});
+document.querySelector('#next').addEventListener('click', playNext);
+document.querySelector('#prev').addEventListener('click', playPrev);
+function playPrev() {
+  if (--pos < 0) pos=count-1;
+  console.log(pos);
+  playAtPos(pos);
+}
+function playNext() {
+  if (++pos >= count) pos=0;
+  console.log(pos);
+  playAtPos(pos);
+}
+function playAtPos(_pos) {
+  pos = _pos;
+  let a = document.querySelector('li a#track-'+pos)
+  console.log(a.dataset.url);
+  video.src = a.dataset.url
+  pos = parseInt(a.dataset.pos);
+  video.play();
+  localStorage['pos'] = pos;
+  let title = document.querySelector('span#title')
+  title.innerHTML = metadata[pos].title;
+}
+video.addEventListener('timeupdate', ()=>{
+  console.log(video.currentTime)
+  localStorage['time'] = video.currentTime;
+});
+// resume on tab reload
+let lastPos = localStorage['pos'];
+if (lastPos) {
+  playAtPos(parseInt(lastPos))
+  video.currentTime = parseFloat(localStorage['time']);
+  video.play();
+}
+    </script>
+  </body>
+</html>
